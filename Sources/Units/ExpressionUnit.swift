@@ -12,6 +12,10 @@ public struct ExpressionUnit: Hashable, Equatable, Codable, Sendable, CustomStri
     
     public var description: String { symbol }
     
+    public var scaleToSI: Double {
+        signature.scaleToSI
+    }
+    
     public init(symbol: String, signature: DimensionalSignature, offsetToSI: Double = 0.0) {
         self.symbol = symbol
         self.signature = signature
@@ -56,5 +60,11 @@ extension ExpressionUnit {
         case (0, 0, 0, 0): return .none
         default: return .none // Complex dynamic compound units fall here
         }
+    }
+}
+
+extension ExpressionUnit {
+    public func convert(_ value: Double, to targetUnit: ExpressionUnit) -> Double? {
+        ConversionEngine.convert(value: value, from: self, to: targetUnit)
     }
 }

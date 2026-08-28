@@ -1,5 +1,5 @@
 import Testing
-@testable import Units
+@testable import S7Units
 
 @Suite("Unit Engine Physics & Conversion Tests")
 struct UnitEngineTests {

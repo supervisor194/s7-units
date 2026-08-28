@@ -1,6 +1,6 @@
 import Foundation
 
-public enum StandardUnits {
+public enum StandardUnits: Sendable {
     public static let none = ExpressionUnit(symbol: "", signature: DimensionalSignature())
     
     // MARK: - Length (Base SI: m)

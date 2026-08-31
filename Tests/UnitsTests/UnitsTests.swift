@@ -4,16 +4,21 @@ import Testing
 @Suite("Unit Engine Physics & Conversion Tests")
 struct UnitEngineTests {
     
+    // Base units for testing
+    let meters = StandardUnits.meters
+    let seconds = StandardUnits.seconds
+    let kilograms = StandardUnits.kilograms
+    
     // MARK: - 1. Signature & Math Tests
     
     @Test("Unit Multiplication creates correct dimensional signatures")
     func testUnitMultiplication() {
         let area = StandardUnits.meters * StandardUnits.meters
         
-        #expect(area.symbol == "m·m")
+        #expect(area.symbol == "m²")
         #expect(area.signature.length == 2)
         #expect(area.signature.mass == 0)
-        #expect(area.category == .none) // Compound unit fallback
+        #expect(area.category == .area) // Compound unit fallback
     }
     
     @Test("Unit Division cancels out identical units")
@@ -137,74 +142,171 @@ struct UnitEngineTests {
     }
     
     // MARK: - Volume Conversions
-
-        @Test("Convert Culinary Ratios: Tablespoons to Teaspoons")
-        func testTablespoonsToTeaspoons() throws {
-            let result = ConversionEngine.convert(
-                value: 2.0,
-                from: StandardUnits.tablespoons,
-                to: StandardUnits.teaspoons
-            )
-            
-            let unwrapped = try #require(result)
-            // 1 tbsp = 3 tsp -> 2 tbsp = 6 tsp
-            #expect(abs(unwrapped - 6.0) < 0.0001)
-        }
-
-        @Test("Convert US Customary Cup to Fluid Ounces & Tablespoons")
-        func testUSCupConversions() throws {
-            let flOzResult = ConversionEngine.convert(
-                value: 1.0,
-                from: StandardUnits.cups,
-                to: StandardUnits.fluidOunces
-            )
-            let tbspResult = ConversionEngine.convert(
-                value: 1.0,
-                from: StandardUnits.cups,
-                to: StandardUnits.tablespoons
-            )
-            
-            let flOz = try #require(flOzResult)
-            let tbsp = try #require(tbspResult)
-            
-            #expect(abs(flOz - 8.0) < 0.001)   // 1 US Cup = 8 fl oz
-            #expect(abs(tbsp - 16.0) < 0.001)  // 1 US Cup = 16 tbsp
-        }
-
-        @Test("Distinguish US Customary Cup vs Metric Cup")
-        func testMetricVsCustomaryCup() throws {
-            let metricCupInMl = ConversionEngine.convert(
-                value: 1.0,
-                from: StandardUnits.metricCups,
-                to: StandardUnits.milliliters
-            )
-            let customaryCupInMl = ConversionEngine.convert(
-                value: 1.0,
-                from: StandardUnits.cups,
-                to: StandardUnits.milliliters
-            )
-            
-            let metricMl = try #require(metricCupInMl)
-            let customaryMl = try #require(customaryCupInMl)
-            
-            #expect(abs(metricMl - 250.0) < 0.001)      // Metric Cup = exactly 250 ml
-            #expect(abs(customaryMl - 236.588) < 0.01)  // US Customary Cup ≈ 236.588 ml
-        }
-
-        @Test("Convert Liquid Volume: Gallons to Quarts and Pints")
-        func testGallonSubdivisions() throws {
-            let quarts = try #require(ConversionEngine.convert(
-                value: 1.0,
-                from: StandardUnits.gallons,
-                to: StandardUnits.quarts
-            ))
-            let pints = try #require(ConversionEngine.convert(
-                value: 1.0,
-                from: StandardUnits.gallons,
-                to: StandardUnits.pints
-            ))
-            
-            #expect(abs(quarts - 4.0) < 0.001) // 1 gallon = 4 quarts
-            #expect(abs(pints - 8.0) < 0.001)  // 1 gallon = 8 pints
-        }
+    
+    @Test("Convert Culinary Ratios: Tablespoons to Teaspoons")
+    func testTablespoonsToTeaspoons() throws {
+        let result = ConversionEngine.convert(
+            value: 2.0,
+            from: StandardUnits.tablespoons,
+            to: StandardUnits.teaspoons
+        )
+        
+        let unwrapped = try #require(result)
+        // 1 tbsp = 3 tsp -> 2 tbsp = 6 tsp
+        #expect(abs(unwrapped - 6.0) < 0.0001)
+    }
+    
+    @Test("Convert US Customary Cup to Fluid Ounces & Tablespoons")
+    func testUSCupConversions() throws {
+        let flOzResult = ConversionEngine.convert(
+            value: 1.0,
+            from: StandardUnits.cups,
+            to: StandardUnits.fluidOunces
+        )
+        let tbspResult = ConversionEngine.convert(
+            value: 1.0,
+            from: StandardUnits.cups,
+            to: StandardUnits.tablespoons
+        )
+        
+        let flOz = try #require(flOzResult)
+        let tbsp = try #require(tbspResult)
+        
+        #expect(abs(flOz - 8.0) < 0.001)   // 1 US Cup = 8 fl oz
+        #expect(abs(tbsp - 16.0) < 0.001)  // 1 US Cup = 16 tbsp
+    }
+    
+    @Test("Distinguish US Customary Cup vs Metric Cup")
+    func testMetricVsCustomaryCup() throws {
+        let metricCupInMl = ConversionEngine.convert(
+            value: 1.0,
+            from: StandardUnits.metricCups,
+            to: StandardUnits.milliliters
+        )
+        let customaryCupInMl = ConversionEngine.convert(
+            value: 1.0,
+            from: StandardUnits.cups,
+            to: StandardUnits.milliliters
+        )
+        
+        let metricMl = try #require(metricCupInMl)
+        let customaryMl = try #require(customaryCupInMl)
+        
+        #expect(abs(metricMl - 250.0) < 0.001)      // Metric Cup = exactly 250 ml
+        #expect(abs(customaryMl - 236.588) < 0.01)  // US Customary Cup ≈ 236.588 ml
+    }
+    
+    @Test("Convert Liquid Volume: Gallons to Quarts and Pints")
+    func testGallonSubdivisions() throws {
+        let quarts = try #require(ConversionEngine.convert(
+            value: 1.0,
+            from: StandardUnits.gallons,
+            to: StandardUnits.quarts
+        ))
+        let pints = try #require(ConversionEngine.convert(
+            value: 1.0,
+            from: StandardUnits.gallons,
+            to: StandardUnits.pints
+        ))
+        
+        #expect(abs(quarts - 4.0) < 0.001) // 1 gallon = 4 quarts
+        #expect(abs(pints - 8.0) < 0.001)  // 1 gallon = 8 pints
+    }
+    
+    @Test("Algebraic cancellation removes terms completely")
+    func testUnitCancellation() throws {
+        // (meters * seconds) / seconds
+        let compound = (meters * seconds) / seconds
+        
+        // The seconds should algebraically cancel out (1 - 1 = 0)
+        #expect(compound == meters)
+        
+        // The canonical symbol shouldn't have any residual "sec" tokens
+        #expect(compound.symbol == "m")
+        #expect(compound.terms["sec"] == nil)
+    }
+    
+    @Test("Multiple paths to Acceleration produce identical canonical units")
+    func testAccelerationMultiplePaths() throws {
+        // Path 1: (m / s) / s
+        let velocity = meters / seconds
+        let accel1 = velocity / seconds
+        
+        // Path 2: m / (s * s)
+        let accel2 = meters / (seconds * seconds)
+        
+        // 1. Check strict equivalence
+        #expect(accel1 == accel2)
+        #expect(accel1.signature == accel2.signature)
+        
+        // 2. Check canonical symbol generation
+        // Both should algebraically resolve to ["m": 1, "sec": -2]
+        // The generator sorts alphabetically and formats as "m/sec²"
+        #expect(accel1.symbol == "m/sec²")
+        #expect(accel2.symbol == "m/sec²")
+    }
+    
+    @Test("Explicit aliased units equate mathematically to raw derived units")
+    func testExplicitAliasEquivalence() throws {
+        // Create an explicit alias for Force
+        let explicitNewtons = ExpressionUnit(symbol: "N", wrapping: kilograms * meters / (seconds * seconds))
+        
+        // Compute raw force: kg * m / sec²
+        let rawForceUnit = kilograms * (meters / (seconds * seconds))
+        
+        // 1. They must evaluate as equal (signatures match)
+        #expect(rawForceUnit == explicitNewtons)
+        
+        // 2. But their symbols behave appropriately!
+        #expect(explicitNewtons.symbol == "N")
+        
+        // The raw unit sorts terms alphabetically: kg(1), m(1), sec(-2) -> "kg·m/sec²"
+        #expect(rawForceUnit.symbol == "kg·m/sec²")
+    }
+    
+    @Test("Derived Acceleration and Force Unit Derivations")
+    func testForceAndAccelerationDerivations() throws {
+        let mass = StandardUnits.kilograms
+        let distance = StandardUnits.meters
+        let time = StandardUnits.seconds
+        
+        // Velocity: m / sec
+        let velocity = distance / time
+        #expect(velocity.category == .speed)
+        
+        // Acceleration: (m / sec) / sec -> m/sec²
+        let acceleration = velocity / time
+        #expect(acceleration == StandardUnits.metersPerSecondSquared)
+        #expect(acceleration.category == .acceleration)
+        
+        // Force: kg * (m/sec²) -> kg·m/sec² (which is equivalent to Newtons)
+        let force = mass * acceleration
+        #expect(force == StandardUnits.newtons)
+        #expect(force.category == .force)
+    }
+    
+    
+    @Test("Derived Units are consistent regardless of mathematical grouping")
+    func testAccelerationUnitComputations() throws {
+        let meters = StandardUnits.meters
+        let seconds = StandardUnits.seconds
+        
+        // Path 1: (m / sec) / sec
+        let velocity = meters / seconds
+        let a1 = velocity / seconds
+        
+        // Path 2: m / (sec * sec)
+        let a2 = meters / (seconds * seconds)
+        
+        // The underlying units attached must match mathematically
+        #expect(a1 == a2)
+        
+        // The canonical symbols should identical and perfectly reduced
+        #expect(a1.symbol == "m/sec²")
+        #expect(a2.symbol == "m/sec²")
+        
+        // Both should land squarely in the acceleration category
+        #expect(a1.category == .acceleration)
+        #expect(a2.category == .acceleration)
+    }
 }

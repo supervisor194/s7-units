@@ -1,45 +1,149 @@
 import Foundation
 
-
 /// A mathematical unit that can be combined, multiplied, and divided.
 public struct ExpressionUnit: Hashable, Equatable, Codable, Sendable, CustomStringConvertible {
-    public let symbol: String
-    public let signature: DimensionalSignature
     
-    /// Used ONLY for units that don't start at absolute zero (Celsius and Fahrenheit).
-    /// Value is added BEFORE scaling to SI.
+    /// The explicitly assigned symbol (e.g. "N", "m/sec²"). If nil, the symbol is auto-generated.
+    public let explicitSymbol: String?
+    
+    /// The algebraic terms making up this unit, mapping symbol -> exponent (e.g., ["m": 1, "sec": -2])
+    public let terms: [String: Int]
+    
+    public let signature: DimensionalSignature
     public var offsetToSI: Double = 0.0
     
-    public var description: String { symbol }
+    // MARK: - Initializers
     
-    public var scaleToSI: Double {
-        signature.scaleToSI
-    }
-    
-    public init(symbol: String, signature: DimensionalSignature, offsetToSI: Double = 0.0) {
-        self.symbol = symbol
+    /// Internal initializer for combining units algebraically
+    private init(explicitSymbol: String? = nil, terms: [String: Int], signature: DimensionalSignature, offsetToSI: Double = 0.0) {
+        self.explicitSymbol = explicitSymbol
+        self.terms = terms
         self.signature = signature
         self.offsetToSI = offsetToSI
     }
     
+    /// Standard Initializer for Base Units (e.g., meters, seconds, kg)
+    public init(symbol: String, signature: DimensionalSignature, offsetToSI: Double = 0.0) {
+        self.explicitSymbol = symbol
+        self.terms = [symbol: 1]
+        self.signature = signature
+        self.offsetToSI = offsetToSI
+    }
+    
+    /// Alias Initializer: Wraps a mathematically derived unit with a custom explicit symbol (e.g., "N")
+    public init(symbol: String, wrapping unit: ExpressionUnit) {
+        self.explicitSymbol = symbol
+        self.terms = unit.terms
+        self.signature = unit.signature
+        self.offsetToSI = unit.offsetToSI
+    }
+    
+    // MARK: - Symbol Generation
+    
+    public var symbol: String {
+        if let explicitSymbol { return explicitSymbol }
+        return ExpressionUnit.buildCanonicalSymbol(from: terms)
+    }
+    
+    public var description: String { symbol }
+    public var scaleToSI: Double { signature.scaleToSI }
+    
+    // MARK: - Operators (Algebraic Simplification)
+    
     public static func * (lhs: ExpressionUnit, rhs: ExpressionUnit) -> ExpressionUnit {
-        ExpressionUnit(
-            symbol: "\(lhs.symbol)·\(rhs.symbol)",
+        let mergedTerms = mergeTerms(lhs.terms, rhs.terms, operation: +)
+        return ExpressionUnit(
+            explicitSymbol: nil, // Clears explicit symbol so canonical string takes over
+            terms: mergedTerms,
             signature: lhs.signature * rhs.signature
         )
     }
     
     public static func / (lhs: ExpressionUnit, rhs: ExpressionUnit) -> ExpressionUnit {
-        if lhs == rhs { return StandardUnits.none }
+        if lhs == rhs { return StandardUnits.none } // Assumes StandardUnits.none is defined
+        
+        let mergedTerms = mergeTerms(lhs.terms, rhs.terms, operation: -)
         return ExpressionUnit(
-            symbol: "\(lhs.symbol)/\(rhs.symbol)",
+            explicitSymbol: nil,
+            terms: mergedTerms,
             signature: lhs.signature / rhs.signature
         )
+    }
+    
+    // MARK: - Equivalence & Hashing
+    
+    /// Two units are equivalent if their physical dimensions and offsets match, regardless of symbol.
+    /// (e.g., "N" == "kg·m/sec²")
+    public static func == (lhs: ExpressionUnit, rhs: ExpressionUnit) -> Bool {
+        return lhs.signature == rhs.signature && lhs.offsetToSI == rhs.offsetToSI
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(signature)
+        hasher.combine(offsetToSI)
+    }
+    
+    // MARK: - Private Helpers
+    
+    private static func mergeTerms(_ lhs: [String: Int], _ rhs: [String: Int], operation: (Int, Int) -> Int) -> [String: Int] {
+        var result = lhs
+        for (term, power) in rhs {
+            let newPower = operation(result[term, default: 0], power)
+            if newPower == 0 {
+                result.removeValue(forKey: term) // Cancels out completely! (e.g. m / m)
+            } else {
+                result[term] = newPower
+            }
+        }
+        return result
+    }
+    
+    private static func buildCanonicalSymbol(from terms: [String: Int]) -> String {
+        if terms.isEmpty { return "" }
+        
+        // Sort alphabetically so kg * m is identical to m * kg
+        let sortedTerms = terms.sorted { $0.key < $1.key }
+        
+        var numerators: [String] = []
+        var denominators: [String] = []
+        
+        for (term, power) in sortedTerms {
+            let formatted = formatTerm(term, power: abs(power))
+            if power > 0 {
+                numerators.append(formatted)
+            } else {
+                denominators.append(formatted)
+            }
+        }
+        
+        let numStr = numerators.isEmpty ? "1" : numerators.joined(separator: "·")
+        
+        if denominators.isEmpty {
+            return numStr
+        }
+        
+        let denStr = denominators.joined(separator: "·")
+        return denominators.count > 1 ? "\(numStr)/(\(denStr))" : "\(numStr)/\(denStr)"
+    }
+    
+    private static func formatTerm(_ term: String, power: Int) -> String {
+        if power == 1 { return term }
+        let superscripts: [Character: Character] = [
+            "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+            "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹"
+        ]
+        let powerStr = String(String(power).map { superscripts[$0] ?? $0 })
+        return "\(term)\(powerStr)"
     }
 }
 
 public enum UnitCategory: String, Codable, Sendable {
-    case length, mass, time, rate, volume, speed, temperature, energy, power, acceleration, none
+    case length, area, volume
+    case mass, density
+    case time, rate, speed, acceleration
+    case force, pressure, energy, power
+    case temperature
+    case none
 }
 
 extension ExpressionUnit {
@@ -47,17 +151,32 @@ extension ExpressionUnit {
         let sig = self.signature
         
         switch (sig.mass, sig.length, sig.time, sig.temperature) {
-        case (0, 1, 0, 0): return .length
-        case (1, 0, 0, 0): return .mass
-        case (0, 0, 1, 0): return .time
-        case (0, 0, -1, 0): return .rate
-        case (0, 3, 0, 0): return .volume
-        case (0, 1, -1, 0): return .speed
-        case (0, 0, 0, 1): return .temperature
-        case (1, 2, -2, 0): return .energy
-        case (1, 2, -3, 0): return .power
-        case (0, 1, -2, 0): return .acceleration
-        case (0, 0, 0, 0): return .none
+        case (0, 0, 0, 0): return .none        // Unitless / Scalar
+            
+            // Geometry
+        case (0, 1, 0, 0): return .length      // m
+        case (0, 2, 0, 0): return .area        // m²
+        case (0, 3, 0, 0): return .volume      // m³
+            
+            // Mass & Material
+        case (1, 0, 0, 0): return .mass        // kg
+        case (1, -3, 0, 0): return .density    // kg/m³
+            
+            // Kinematics (Time/Motion)
+        case (0, 0, 1, 0): return .time        // s
+        case (0, 0, -1, 0): return .rate       // 1/s (Frequency / Hz / BPM)
+        case (0, 1, -1, 0): return .speed      // m/s
+        case (0, 1, -2, 0): return .acceleration // m/s²
+            
+            // Dynamics (Forces & Energy)
+        case (1, 1, -2, 0): return .force      // N  (kg·m/s²)
+        case (1, -1, -2, 0): return .pressure  // Pa (N/m² -> kg/(m·s²))
+        case (1, 2, -2, 0): return .energy     // J  (N·m -> kg·m²/s²)
+        case (1, 2, -3, 0): return .power      // W  (J/s -> kg·m²/s³)
+            
+            // Thermodynamics
+        case (0, 0, 0, 1): return .temperature // K
+            
         default: return .none // Complex dynamic compound units fall here
         }
     }

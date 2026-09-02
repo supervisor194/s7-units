@@ -40,6 +40,10 @@ public struct ExpressionUnit: Hashable, Equatable, Codable, Sendable, CustomStri
     
     // MARK: - Symbol Generation
     
+    public var canonicalSymbol: String {
+        ExpressionUnit.buildCanonicalSymbol(from: terms)
+    }
+    
     public var symbol: String {
         if let explicitSymbol { return explicitSymbol }
         return ExpressionUnit.buildCanonicalSymbol(from: terms)
@@ -143,6 +147,7 @@ public enum UnitCategory: String, Codable, Sendable {
     case time, rate, speed, acceleration
     case force, pressure, energy, power
     case temperature
+    case flowRate, efficiency
     case none
 }
 
@@ -176,6 +181,10 @@ extension ExpressionUnit {
             
             // Thermodynamics
         case (0, 0, 0, 1): return .temperature // K
+            
+            // Specialized
+        case (0, 3, -1, 0): return .flowRate   // Volumetric Flow (e.g., gal/min, m³/s)
+        case (0, -2, 0, 0): return .efficiency // Fuel Economy (e.g., mpg, km/L)
             
         default: return .none // Complex dynamic compound units fall here
         }

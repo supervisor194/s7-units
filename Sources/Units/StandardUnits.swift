@@ -90,7 +90,6 @@ public enum StandardUnits: Sendable {
     public static let metersPerSecond = ExpressionUnit(symbol: "m/s", wrapping: meters / seconds)
     public static let feetPerSecond = ExpressionUnit(symbol: "ft/s", wrapping: feet / seconds) // Or "fps" depending on your preference
     public static let knots = ExpressionUnit(symbol: "kn", wrapping: nauticalMiles / hours)
-    
     public static let milesPerHour = ExpressionUnit(symbol: "mph", wrapping: miles / hours)
     public static let kilometersPerHour = ExpressionUnit(symbol: "km/h", wrapping: kilometers / hours)
     

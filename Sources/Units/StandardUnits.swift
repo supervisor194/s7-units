@@ -6,10 +6,10 @@ public enum StandardUnits: Sendable {
     // Base Units
     public static let meters      = ExpressionUnit(symbol: "m",  signature: DimensionalSignature(length: 1, scaleToSI: 1.0))
     public static let kilograms   = ExpressionUnit(symbol: "kg",  signature: DimensionalSignature(mass: 1, scaleToSI: 1.0))
-    public static let seconds     = ExpressionUnit(symbol: "sec", signature: DimensionalSignature(time: 1, scaleToSI: 1.0))
+    public static let seconds     = ExpressionUnit(symbol: "s", signature: DimensionalSignature(time: 1, scaleToSI: 1.0))
     public static let kelvin     = ExpressionUnit(symbol: "K",  signature: DimensionalSignature(temperature: 1, scaleToSI: 1.0))
     
-    public static let baseUnits: [ExpressionUnit] = [meters, kilograms, seconds, kelvin]
+    public static let sec     = ExpressionUnit(symbol: "sec", wrapping: seconds)
     
     
     // Length (Base SI: m)
@@ -18,19 +18,13 @@ public enum StandardUnits: Sendable {
     public static let inches      = ExpressionUnit(symbol: "in", signature: DimensionalSignature(length: 1, scaleToSI: 0.0254))
     public static let feet        = ExpressionUnit(symbol: "ft", signature: DimensionalSignature(length: 1, scaleToSI: 0.3048))
     public static let miles       = ExpressionUnit(symbol: "mi", signature: DimensionalSignature(length: 1, scaleToSI: 1609.344))
-    
     // "nmi" and "nm" are also common, though "nm" can conflict with nanometers
     public static let nauticalMiles = ExpressionUnit(symbol: "NM", signature: DimensionalSignature(length: 1, scaleToSI: 1852.0))
-    
-    public static let lengthUnits: [ExpressionUnit] = [meters, centimeters, kilometers, inches, feet, miles, nauticalMiles]
     
     // Mass/Weight (Base SI: kg)
     public static let grams       = ExpressionUnit(symbol: "g",   signature: DimensionalSignature(mass: 1, scaleToSI: 0.001))
     public static let pounds      = ExpressionUnit(symbol: "lbs", signature: DimensionalSignature(mass: 1, scaleToSI: 0.45359237))
     public static let ounces      = ExpressionUnit(symbol: "oz",  signature: DimensionalSignature(mass: 1, scaleToSI: 0.02834952))
-    
-    
-    public static let massUnits: [ExpressionUnit] = [kilograms, grams, pounds, ounces]
     
     
     // Time (Base SI: s)
@@ -42,8 +36,6 @@ public enum StandardUnits: Sendable {
     public static let quarters    = ExpressionUnit(symbol: "qr", signature: DimensionalSignature(time: 1, scaleToSI: 7_776_000.0))
     public static let years       = ExpressionUnit(symbol: "yr", signature: DimensionalSignature(time: 1, scaleToSI: 31_536_000.0))
     
-    public static let timeUnits: [ExpressionUnit] = [seconds, minutes, hours, days, weeks, months, quarters, years]
-    
     
     // Temperature (Base SI: Kelvin)
     // Offset logic: (Celsius + 273.15) * 1.0 = Kelvin
@@ -51,39 +43,33 @@ public enum StandardUnits: Sendable {
     // Offset logic: (Fahrenheit + 459.67) * (5/9) = Kelvin
     public static let fahrenheit = ExpressionUnit(symbol: "°F", signature: DimensionalSignature(temperature: 1, scaleToSI: 5.0/9.0), offsetToSI: 459.67)
     
-    public static let temperatureUnits: [ExpressionUnit] = [kelvin, celsius, fahrenheit]
-    
-    
     //  Volume (Length^3)
     public static let milliliters = ExpressionUnit(symbol: "ml",    signature: DimensionalSignature(length: 3, scaleToSI: 1e-6))
     public static let liters      = ExpressionUnit(symbol: "l",   signature: DimensionalSignature(length: 3, scaleToSI: 0.001))
     public static let metricCups  = ExpressionUnit(symbol: "mc",    signature: DimensionalSignature(length: 3, scaleToSI: 0.00025)) // 250 ml standard
-    
     public static let fluidOunces = ExpressionUnit(symbol: "fl oz", signature: DimensionalSignature(length: 3, scaleToSI: 0.0000295735))
     public static let teaspoons   = ExpressionUnit(symbol: "tsp",   signature: DimensionalSignature(length: 3, scaleToSI: 4.92892159375e-6))
     public static let tablespoons = ExpressionUnit(symbol: "tbsp",  signature: DimensionalSignature(length: 3, scaleToSI: 1.478676478125e-5))
     public static let cups        = ExpressionUnit(symbol: "c",     signature: DimensionalSignature(length: 3, scaleToSI: 0.0002365882365)) // US Customary
-    
     public static let pints       = ExpressionUnit(symbol: "pt",    signature: DimensionalSignature(length: 3, scaleToSI: 0.000473176473))
     public static let quarts      = ExpressionUnit(symbol: "qt",    signature: DimensionalSignature(length: 3, scaleToSI: 0.000946352946))
     public static let gallons     = ExpressionUnit(symbol: "gal",   signature: DimensionalSignature(length: 3, scaleToSI: 0.003785411784))
     public static let barrels     = ExpressionUnit(symbol: "bbl", signature: DimensionalSignature(length: 3, scaleToSI: 0.158987294928))
     
-    public static let volumeUnits: [ExpressionUnit] = [milliliters, liters, metricCups, fluidOunces, teaspoons, tablespoons, cups, pints, quarts, gallons, barrels]
     
-    // Acceleration
+    // Acceleration & Force
     // 1 g = 9.80665 m/s²
-    public static let standardGravity = ExpressionUnit(symbol: "g", signature: DimensionalSignature(length: 1, time: -2, scaleToSI: 9.80665))
-    
-    // common abbreviations
-    
+    public static let standardGravity = ExpressionUnit(symbol: "G", signature: DimensionalSignature(length: 1, time: -2, scaleToSI: 9.80665))
+    public static let standardGravity2 = ExpressionUnit(symbol: "g-force", wrapping: standardGravity)
     // 1 lbf = 1 lb_mass * 1 g
     public static let poundsForce = ExpressionUnit(symbol: "lbf", wrapping: pounds * standardGravity)
+    // Mathematically derived (kg * m / sec²), but aliased to "N"
+    public static let newtons = ExpressionUnit(symbol: "N", wrapping: kilograms * metersPerSecondSquared)
     
     // Standard Acceleration
+    public static let metersPerSecondSquared = ExpressionUnit(symbol: "m/s²", wrapping: meters / (seconds * seconds))
+    public static let metersPerSecSquared = ExpressionUnit(symbol: "m/sec²", wrapping: meters / (seconds * seconds))
     public static let feetPerSecondSquared = ExpressionUnit(symbol: "ft/s²", wrapping: feet / (seconds * seconds))
-    public static let metersPerSecondSquared = ExpressionUnit(symbol: "m/sec²", wrapping: meters / (seconds * seconds))
-    public static let metersPerSecondSquared2 = ExpressionUnit(symbol: "m/s²", wrapping: meters / (seconds * seconds))
     
     // Speed
     // Standard Velocity
@@ -93,8 +79,6 @@ public enum StandardUnits: Sendable {
     public static let milesPerHour = ExpressionUnit(symbol: "mph", wrapping: miles / hours)
     public static let kilometersPerHour = ExpressionUnit(symbol: "km/h", wrapping: kilometers / hours)
     
-    // Mathematically derived (kg * m / sec²), but aliased to "N"
-    public static let newtons = ExpressionUnit(symbol: "N", wrapping: kilograms * metersPerSecondSquared)
     
     
     // Rates
@@ -107,6 +91,11 @@ public enum StandardUnits: Sendable {
     public static let cubicFeetPerMinute = ExpressionUnit(symbol: "cfm", wrapping: (feet * feet * feet) / minutes)
     public static let gallonsPerMinute = ExpressionUnit(symbol: "gpm", wrapping: gallons / minutes)
     public static let milesPerGallon = ExpressionUnit(symbol: "mpg", wrapping: miles / gallons)
+    public static let litersPerMinute      = ExpressionUnit(symbol: "l/min", wrapping: liters / minutes)
+    public static let cubicMetersPerSecond = ExpressionUnit(symbol: "m³/s", wrapping: (meters * meters * meters) / seconds)
+    public static let gallonsPerHour       = ExpressionUnit(symbol: "gph", wrapping: gallons / hours)
+    public static let barrelsPerDay        = ExpressionUnit(symbol: "bbl/d", wrapping: barrels / days)
+    
     
     // Pressure
     public static let pascals = ExpressionUnit(symbol: "Pa", wrapping: newtons / (meters * meters))
@@ -122,70 +111,54 @@ public enum StandardUnits: Sendable {
     public static let squareMeters = ExpressionUnit(symbol: "sq m", wrapping: meters * meters)
     public static let squareMeters2 = ExpressionUnit(symbol: "m²", wrapping: meters * meters)
     
-    // Flow rates
-    // Liquid & Gas Flow
-    public static let litersPerMinute = ExpressionUnit(symbol: "L/min", wrapping: liters / minutes)
-    public static let cubicMetersPerSecond = ExpressionUnit(symbol: "m³/s", wrapping: (meters * meters * meters) / seconds)
-    public static let gallonsPerHour = ExpressionUnit(symbol: "gph", wrapping: gallons / hours)
-    public static let barrelsPerDay = ExpressionUnit(symbol: "bbl/d", wrapping: barrels / days)
-    
-    
     // Energy & Power
     public static let joules = ExpressionUnit(symbol: "J", wrapping: newtons * meters)
     public static let kilojoules = ExpressionUnit(symbol: "kJ", signature: DimensionalSignature(mass: 1, length: 2, time: -2, scaleToSI: 1000.0))
     public static let calories = ExpressionUnit(symbol: "cal", signature: DimensionalSignature(mass: 1, length: 2, time: -2, scaleToSI: 4.184))
-    
-    // 1 kcal = 1,000 cal = 4,184 J
     public static let kilocalories = ExpressionUnit(symbol: "kcal", signature: DimensionalSignature(mass: 1, length: 2, time: -2, scaleToSI: 4184.0))
-    
-    // Alias for US Nutrition Labels
     public static let dietaryCalories = ExpressionUnit(symbol: "Cal", signature: DimensionalSignature(mass: 1, length: 2, time: -2, scaleToSI: 4184.0))
     
     // MARK: - Power
     public static let watts = ExpressionUnit(symbol: "W", wrapping: joules / seconds)
     public static let kilowatts = ExpressionUnit(symbol: "kW", signature: DimensionalSignature(mass: 1, length: 2, time: -3, scaleToSI: 1000.0))
-    
     public static let wattHours = ExpressionUnit(symbol: "Wh", wrapping: watts * hours)
     public static let kilowattHours = ExpressionUnit(symbol: "kWh", wrapping: kilowatts * hours)
     
     
-    public static let derivedAndAliasedUnits: [ExpressionUnit] = [
-        standardGravity, poundsForce, metersPerSecond, feetPerSecond, knots,
-        milesPerHour, kilometersPerHour, beatsPerMinute, breathsPerMinute,
-        revolutionsPerMinute, cubicFeetPerMinute, gallonsPerMinute, milesPerGallon,
-        pascals, poundsPerSquareInch, cubicCentimeters, squareFeet, squareFeet2,
-        squareMeters, squareMeters2, litersPerMinute, cubicMetersPerSecond,
-        gallonsPerHour, barrelsPerDay, joules, kilojoules, calories, kilocalories, dietaryCalories,
-        watts, kilowatts, wattHours, kilowattHours,
-        newtons, feetPerSecondSquared, metersPerSecondSquared,
-        metersPerSecondSquared2
+    public static let core: [ExpressionUnit] = [
+        meters, kilograms, seconds, kelvin, sec,
+        centimeters, kilometers, inches, feet, miles, nauticalMiles,
+        grams, pounds, ounces,
+        minutes, hours, days, weeks, months, quarters, years,
+        celsius, fahrenheit,
+        milliliters, liters, metricCups, fluidOunces, teaspoons, tablespoons, cups, pints, quarts, gallons, barrels,
+        standardGravity, poundsForce, feetPerSecondSquared, metersPerSecondSquared, metersPerSecSquared, newtons,
+        metersPerSecond, feetPerSecond, knots, milesPerHour, kilometersPerHour,
+        beatsPerMinute, breathsPerMinute, revolutionsPerMinute, cubicFeetPerMinute, gallonsPerMinute, milesPerGallon, litersPerMinute, cubicMetersPerSecond, gallonsPerHour, barrelsPerDay,
+        pascals, poundsPerSquareInch,
+        cubicCentimeters, squareFeet, squareFeet2, squareMeters, squareMeters2,
+        joules, kilojoules, calories, kilocalories, dietaryCalories,
+        watts, kilowatts, wattHours, kilowattHours
     ]
     
-    
     public static var all: [ExpressionUnit] {
-        Array(
-            Set(baseUnits)
-                .union(lengthUnits)
-                .union(massUnits)
-                .union(timeUnits)
-                .union(temperatureUnits)
-                .union(volumeUnits)
-                .union(derivedAndAliasedUnits)
-        )
+        core + ExpressionUnit.userUnits
     }
     
 }
 
 extension StandardUnits {
     /// Robust parsing from string input, evaluating algebraic combinations.
-    public static func resolve(_ s: String) -> ExpressionUnit {
+    public static func resolve(_ s: String, keep: Bool=true) -> ExpressionUnit {
         let cleaned = s.trimmingCharacters(in: .whitespacesAndNewlines)
         if cleaned.isEmpty { return StandardUnits.none }
         
         let lowercased = cleaned.lowercased()
         
+        let allUnits = all
+        
         // 1. Fast Path: Exact Match (e.g., "N", "kg", "m/sec²")
-        if let exact = all.first(where: { $0.symbol.lowercased() == lowercased || $0.explicitSymbol?.lowercased() == lowercased }) {
+        if let exact = allUnits.first(where: { $0.symbol.lowercased() == lowercased || $0.explicitSymbol?.lowercased() == lowercased }) {
             return exact
         }
         
@@ -211,7 +184,7 @@ extension StandardUnits {
             let power = parts.count > 1 ? (Int(parts[1]) ?? 1) : 1
             
             // Look up the base token
-            guard let baseUnit = all.first(where: { $0.symbol.lowercased() == symbol.lowercased() }) else {
+            guard let baseUnit = allUnits.first(where: { $0.symbol.lowercased() == symbol.lowercased() }) else {
                 currentToken = ""
                 return // You could throw an error here for unknown tokens if desired
             }
@@ -223,7 +196,7 @@ extension StandardUnits {
             }
             
             // Apply to the running mathematical result
-            if result == StandardUnits.none {
+            if result.isEquivalent(to: StandardUnits.none) {
                 result = operation == "/" ? (StandardUnits.none / termUnit) : termUnit
             } else {
                 result = operation == "/" ? (result / termUnit) : (result * termUnit)
@@ -246,8 +219,12 @@ extension StandardUnits {
         // 3. The Magic: Alias Resolution
         // If the parsed string algebraically equates to a known unit, return the canonical version.
         // e.g. "kg*m/sec^2" == newtons (because signatures match!).
-        if let canonicalAlias = all.first(where: { $0 == result }) {
+        if let canonicalAlias = allUnits.first(where: { $0.isEquivalent(to: result) }) {
             return canonicalAlias
+        }
+        
+        if keep {
+            ExpressionUnit.registerUserUnit(result)
         }
         
         return result

@@ -242,8 +242,8 @@ struct UnitEngineTests {
         // 2. Check canonical symbol generation
         // Both should algebraically resolve to ["m": 1, "sec": -2]
         // The generator sorts alphabetically and formats as "m/sec²"
-        #expect(accel1.symbol == "m/sec²")
-        #expect(accel2.symbol == "m/sec²")
+        #expect(accel1.symbol == "m/s²")
+        #expect(accel2.symbol == "m/s²")
     }
     
     @Test("Explicit aliased units equate mathematically to raw derived units")
@@ -255,13 +255,13 @@ struct UnitEngineTests {
         let rawForceUnit = kilograms * (meters / (seconds * seconds))
         
         // 1. They must evaluate as equal (signatures match)
-        #expect(rawForceUnit == explicitNewtons)
+        #expect(rawForceUnit.isEquivalent(to: explicitNewtons))
         
         // 2. But their symbols behave appropriately!
         #expect(explicitNewtons.symbol == "N")
         
         // The raw unit sorts terms alphabetically: kg(1), m(1), sec(-2) -> "kg·m/sec²"
-        #expect(rawForceUnit.symbol == "kg·m/sec²")
+        #expect(rawForceUnit.symbol == "kg·m/s²")
     }
     
     @Test("Derived Acceleration and Force Unit Derivations")
@@ -281,7 +281,7 @@ struct UnitEngineTests {
         
         // Force: kg * (m/sec²) -> kg·m/sec² (which is equivalent to Newtons)
         let force = mass * acceleration
-        #expect(force == StandardUnits.newtons)
+        #expect(force.isEquivalent(to: StandardUnits.newtons))
         #expect(force.category == .force)
     }
     
@@ -302,8 +302,8 @@ struct UnitEngineTests {
         #expect(a1 == a2)
         
         // The canonical symbols should identical and perfectly reduced
-        #expect(a1.symbol == "m/sec²")
-        #expect(a2.symbol == "m/sec²")
+        #expect(a1.symbol == "m/s²")
+        #expect(a2.symbol == "m/s²")
         
         // Both should land squarely in the acceleration category
         #expect(a1.category == .acceleration)

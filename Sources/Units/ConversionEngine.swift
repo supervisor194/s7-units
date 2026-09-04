@@ -6,7 +6,9 @@ public enum ConversionEngine {
     public static func convert(value: Double, from sourceUnit: ExpressionUnit, to targetUnit: ExpressionUnit) -> Double? {
         
         // 1. If units are identical, return exact value
-        if sourceUnit == targetUnit { return value }
+        if sourceUnit == targetUnit || sourceUnit.isEquivalent(to: targetUnit) {
+            return value
+        }
         
         // 2. Ensure they measure the same physical property (e.g. Length to Length)
         guard sourceUnit.signature.isEquivalent(to: targetUnit.signature) else {

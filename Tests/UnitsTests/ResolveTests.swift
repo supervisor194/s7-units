@@ -5,11 +5,15 @@ import Testing
 @Suite("String Resolution and Parsing Tests")
 struct UnitParsingTests {
     
+    init() {
+        ExpressionUnit.deleteUserUnits()
+    }
+    
     @Test("Fast Path: Direct alias matches work instantly")
     func testDirectMatches() {
         #expect(StandardUnits.resolve("N") == StandardUnits.newtons)
         #expect(StandardUnits.resolve("kg") == StandardUnits.kilograms)
-        #expect(StandardUnits.resolve("m/sec²") == StandardUnits.metersPerSecondSquared)
+        #expect(StandardUnits.resolve("m/s²") == StandardUnits.metersPerSecondSquared)
         #expect(StandardUnits.resolve("m/sec^2") == StandardUnits.metersPerSecondSquared) // Works due to normalization
     }
     
@@ -39,7 +43,7 @@ struct UnitParsingTests {
         
         // 3. Bizarre ordering -> should STILL snap to Newtons
         // "m / sec^2 * kg" algebraically equates to Newtons!
-        let messyForce = StandardUnits.resolve("m / sec^2 * kg")
+        let messyForce = StandardUnits.resolve("m / sec^2 * kg", keep: false)
         #expect(messyForce == StandardUnits.newtons)
         #expect(messyForce.symbol == "N")
     }

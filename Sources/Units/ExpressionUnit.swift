@@ -1,7 +1,7 @@
 import Foundation
 
 /// A mathematical unit that can be combined, multiplied, and divided.
-public struct ExpressionUnit: Hashable, Equatable, Codable, Sendable, CustomStringConvertible {
+public struct ExpressionUnit:  Hashable, Codable, Sendable, CustomStringConvertible {
     
     /// The explicitly assigned symbol (e.g. "N", "m/sec²"). If nil, the symbol is auto-generated.
     public let explicitSymbol: String?
@@ -64,7 +64,7 @@ public struct ExpressionUnit: Hashable, Equatable, Codable, Sendable, CustomStri
     }
     
     public static func / (lhs: ExpressionUnit, rhs: ExpressionUnit) -> ExpressionUnit {
-        if lhs == rhs { return StandardUnits.none } // Assumes StandardUnits.none is defined
+        if lhs.isEquivalent(to: rhs) { return StandardUnits.none } // Assumes StandardUnits.none is defined
         
         let mergedTerms = mergeTerms(lhs.terms, rhs.terms, operation: -)
         return ExpressionUnit(
@@ -76,13 +76,22 @@ public struct ExpressionUnit: Hashable, Equatable, Codable, Sendable, CustomStri
     
     // MARK: - Equivalence & Hashing
     
+    
+    public static func == (lhs: ExpressionUnit, rhs: ExpressionUnit) -> Bool {
+        lhs.symbol == rhs.symbol  &&
+        lhs.signature == rhs.signature &&
+        lhs.offsetToSI == rhs.offsetToSI
+    }
+    
     /// Two units are equivalent if their physical dimensions and offsets match, regardless of symbol.
     /// (e.g., "N" == "kg·m/sec²")
-    public static func == (lhs: ExpressionUnit, rhs: ExpressionUnit) -> Bool {
-        return lhs.signature == rhs.signature && lhs.offsetToSI == rhs.offsetToSI
+    public func isEquivalent(to other: ExpressionUnit) -> Bool {
+        signature == other.signature &&
+        offsetToSI == other.offsetToSI
     }
     
     public func hash(into hasher: inout Hasher) {
+        hasher.combine(symbol)
         hasher.combine(signature)
         hasher.combine(offsetToSI)
     }
@@ -195,4 +204,50 @@ extension ExpressionUnit {
     public func convert(_ value: Double, to targetUnit: ExpressionUnit) -> Double? {
         ConversionEngine.convert(value: value, from: self, to: targetUnit)
     }
+}
+
+
+extension ExpressionUnit {
+    private static let lock = NSLock()
+    private static let userDefaultsKey = "com.engage.customUserUnits"
+    
+    nonisolated(unsafe) private static var userDefinedUnits: [ExpressionUnit] = {
+        loadFromDisk()
+    }()
+    
+    public static func registerUserUnit(_ unit: ExpressionUnit) {
+        lock.lock()
+        defer { lock.unlock() }
+        if !userDefinedUnits.contains(where : { $0 == unit }) {
+            userDefinedUnits.append(unit)
+            saveToDisk()
+        }
+    }
+    
+    public static var userUnits: [ExpressionUnit] {
+        lock.lock()
+        defer { lock.unlock() }
+        return userDefinedUnits
+    }
+    
+    public static func deleteUserUnits() {
+        lock.lock()
+        defer { lock.unlock() }
+        userDefinedUnits.removeAll()
+        UserDefaults.standard.removeObject(forKey: userDefaultsKey)
+    }
+    
+    private static func saveToDisk() {
+        guard let data = try? JSONEncoder().encode(userDefinedUnits) else { return }
+        UserDefaults.standard.set(data, forKey: userDefaultsKey)
+    }
+    
+    private static func loadFromDisk() -> [ExpressionUnit] {
+        guard let data = UserDefaults.standard.data(forKey: userDefaultsKey),
+              let units = try? JSONDecoder().decode([ExpressionUnit].self, from: data) else {
+            return []
+        }
+        return units
+    }
+    
 }

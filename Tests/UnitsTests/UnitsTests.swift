@@ -11,6 +11,14 @@ struct UnitEngineTests {
     
     // MARK: - 1. Signature & Math Tests
     
+    @Test("test unitless")
+    func testUnitless() {
+        let finalUnits = StandardUnits.none * StandardUnits.none
+        
+        #expect(finalUnits.symbol == "")
+        #expect(finalUnits.signature.length == 0)
+    }
+    
     @Test("Unit Multiplication creates correct dimensional signatures")
     func testUnitMultiplication() {
         let area = StandardUnits.meters * StandardUnits.meters

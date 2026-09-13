@@ -12,6 +12,10 @@ public struct ExpressionUnit:  Hashable, Codable, Sendable, CustomStringConverti
     public let signature: DimensionalSignature
     public var offsetToSI: Double = 0.0
     
+    public var isUnitless: Bool {
+        self.signature.isDimensionless
+    }
+    
     // MARK: - Initializers
     
     /// Internal initializer for combining units algebraically
@@ -55,6 +59,12 @@ public struct ExpressionUnit:  Hashable, Codable, Sendable, CustomStringConverti
     // MARK: - Operators (Algebraic Simplification)
     
     public static func * (lhs: ExpressionUnit, rhs: ExpressionUnit) -> ExpressionUnit {
+        if lhs.isUnitless {
+            return rhs
+        }
+        if rhs.isUnitless {
+            return lhs
+        }
         let mergedTerms = mergeTerms(lhs.terms, rhs.terms, operation: +)
         return ExpressionUnit(
             explicitSymbol: nil, // Clears explicit symbol so canonical string takes over
@@ -64,7 +74,7 @@ public struct ExpressionUnit:  Hashable, Codable, Sendable, CustomStringConverti
     }
     
     public static func / (lhs: ExpressionUnit, rhs: ExpressionUnit) -> ExpressionUnit {
-        if lhs.isEquivalent(to: rhs) { return StandardUnits.none } // Assumes StandardUnits.none is defined
+        if lhs.isEquivalent(to: rhs) { return StandardUnits.none }
         
         let mergedTerms = mergeTerms(lhs.terms, rhs.terms, operation: -)
         return ExpressionUnit(

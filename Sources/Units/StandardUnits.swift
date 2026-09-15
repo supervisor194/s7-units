@@ -1,5 +1,20 @@
 import Foundation
 
+extension DimensionalSignature {
+    public static let error =  DimensionalSignature(mass: .min, length: .min, time: .min, temperature: .min, scaleToSI: .nan)
+    
+    public var isError: Bool {
+        mass == .min && length == .min && time == .min && temperature == .min
+    }
+}
+
+extension ExpressionUnit {
+    public static let error = ExpressionUnit(symbol: "error", signature: .error)
+    public var isError: Bool {
+        self.signature.isError || self.explicitSymbol == "error"
+    }
+}
+
 public enum StandardUnits: Sendable {
     public static let none = ExpressionUnit(symbol: "", signature: DimensionalSignature())
     

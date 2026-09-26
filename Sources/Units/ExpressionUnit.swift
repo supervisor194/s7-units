@@ -93,6 +93,10 @@ public struct ExpressionUnit:  Hashable, Codable, Sendable, CustomStringConverti
         lhs.offsetToSI == rhs.offsetToSI
     }
     
+    public func isCompatible(with other: ExpressionUnit) -> Bool {
+        signature.isEquivalent(to: other.signature)
+    }
+    
     /// Two units are equivalent if their physical dimensions and offsets match, regardless of symbol.
     /// (e.g., "N" == "kg·m/sec²")
     public func isEquivalent(to other: ExpressionUnit) -> Bool {

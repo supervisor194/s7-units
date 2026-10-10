@@ -43,13 +43,14 @@ public enum StandardUnits: Sendable {
     
     
     // Time (Base SI: s)
-    public static let minutes     = ExpressionUnit(symbol: "min", signature: DimensionalSignature(time: 1, scaleToSI: 60.0))
-    public static let hours       = ExpressionUnit(symbol: "hr",  signature: DimensionalSignature(time: 1, scaleToSI: 3600.0))
-    public static let days        = ExpressionUnit(symbol: "d",   signature: DimensionalSignature(time: 1, scaleToSI: 86400.0))
-    public static let weeks       = ExpressionUnit(symbol: "wk", signature: DimensionalSignature(time: 1, scaleToSI: 604_800.0))
-    public static let months      = ExpressionUnit(symbol: "mo", signature: DimensionalSignature(time: 1, scaleToSI: 2_592_000.0))
-    public static let quarters    = ExpressionUnit(symbol: "qr", signature: DimensionalSignature(time: 1, scaleToSI: 7_776_000.0))
-    public static let years       = ExpressionUnit(symbol: "yr", signature: DimensionalSignature(time: 1, scaleToSI: 31_536_000.0))
+    public static let milliseconds = ExpressionUnit(symbol: "ms", signature: DimensionalSignature(time: 1, scaleToSI: 0.001))
+    public static let minutes      = ExpressionUnit(symbol: "min", signature: DimensionalSignature(time: 1, scaleToSI: 60.0))
+    public static let hours        = ExpressionUnit(symbol: "hr",  signature: DimensionalSignature(time: 1, scaleToSI: 3600.0))
+    public static let days         = ExpressionUnit(symbol: "d",   signature: DimensionalSignature(time: 1, scaleToSI: 86400.0))
+    public static let weeks        = ExpressionUnit(symbol: "wk", signature: DimensionalSignature(time: 1, scaleToSI: 604_800.0))
+    public static let months       = ExpressionUnit(symbol: "mo", signature: DimensionalSignature(time: 1, scaleToSI: 2_592_000.0))
+    public static let quarters     = ExpressionUnit(symbol: "qr", signature: DimensionalSignature(time: 1, scaleToSI: 7_776_000.0))
+    public static let years        = ExpressionUnit(symbol: "yr", signature: DimensionalSignature(time: 1, scaleToSI: 31_536_000.0))
     
     
     // Temperature (Base SI: Kelvin)

@@ -51,8 +51,7 @@ public enum StandardUnits: Sendable {
     public static let months       = ExpressionUnit(symbol: "mo", signature: DimensionalSignature(time: 1, scaleToSI: 2_592_000.0))
     public static let quarters     = ExpressionUnit(symbol: "qr", signature: DimensionalSignature(time: 1, scaleToSI: 7_776_000.0))
     public static let years        = ExpressionUnit(symbol: "yr", signature: DimensionalSignature(time: 1, scaleToSI: 31_536_000.0))
-    
-    
+        
     // Temperature (Base SI: Kelvin)
     // Offset logic: (Celsius + 273.15) * 1.0 = Kelvin
     public static let celsius    = ExpressionUnit(symbol: "°C", signature: DimensionalSignature(temperature: 1, scaleToSI: 1.0), offsetToSI: 273.15)
@@ -140,7 +139,8 @@ public enum StandardUnits: Sendable {
     public static let wattHours = ExpressionUnit(symbol: "Wh", wrapping: watts * hours)
     public static let kilowattHours = ExpressionUnit(symbol: "kWh", wrapping: kilowatts * hours)
     
-    
+                                            
+                                                    
     public static let core: [ExpressionUnit] = [
         meters, kilograms, seconds, kelvin, sec,
         centimeters, kilometers, inches, feet, miles, nauticalMiles,
@@ -154,7 +154,7 @@ public enum StandardUnits: Sendable {
         pascals, poundsPerSquareInch,
         cubicCentimeters, squareFeet, squareFeet2, squareMeters, squareMeters2,
         joules, kilojoules, calories, kilocalories, dietaryCalories,
-        watts, kilowatts, wattHours, kilowattHours
+        watts, kilowatts, wattHours, kilowattHours,
     ]
     
     public static var all: [ExpressionUnit] {

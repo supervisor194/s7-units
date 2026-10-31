@@ -2,13 +2,22 @@ import Foundation
 
 /// Represents the fundamental physics dimensions of any value.
 public struct DimensionalSignature: Hashable, Equatable, Codable, Sendable {
-    public var mass: Int = 0
-    public var length: Int = 0
-    public var time: Int = 0
-    public var temperature: Int = 0
+    public let mass: Int
+    public let length: Int
+    public let time: Int
+    public let temperature: Int
     
     /// Multiplier to convert a value in this unit to pure SI base units.
-    public var scaleToSI: Double = 1.0
+    public let scaleToSI: Double
+    
+    
+    public init(mass: Int = 0, length: Int = 0, time: Int = 0, temperature: Int = 0, scaleToSI: Double = 1.0) {
+        self.mass = mass
+        self.length = length
+        self.time = time
+        self.temperature = temperature
+        self.scaleToSI = scaleToSI
+    }
     
     public var isDimensionless: Bool {
         mass == 0 && length == 0 && time == 0 && temperature == 0

@@ -22,7 +22,7 @@ public enum StandardUnits: Sendable {
     public static let meters      = ExpressionUnit(symbol: "m",  signature: DimensionalSignature(length: 1, scaleToSI: 1.0))
     public static let kilograms   = ExpressionUnit(symbol: "kg",  signature: DimensionalSignature(mass: 1, scaleToSI: 1.0))
     public static let seconds     = ExpressionUnit(symbol: "s", signature: DimensionalSignature(time: 1, scaleToSI: 1.0))
-    public static let kelvin     = ExpressionUnit(symbol: "K",  signature: DimensionalSignature(temperature: 1, scaleToSI: 1.0))
+    public static let kelvin      = ExpressionUnit(symbol: "K",  signature: DimensionalSignature(temperature: 1, scaleToSI: 1.0))
     
     public static let sec     = ExpressionUnit(symbol: "sec", wrapping: seconds)
     
@@ -157,92 +157,4 @@ public enum StandardUnits: Sendable {
         watts, kilowatts, wattHours, kilowattHours,
     ]
     
-    public static var all: [ExpressionUnit] {
-        core + ExpressionUnit.userUnits
-    }
-    
-}
-
-extension StandardUnits {
-    /// Robust parsing from string input, evaluating algebraic combinations.
-    public static func resolve(_ s: String, keep: Bool=true) -> ExpressionUnit {
-        let cleaned = s.trimmingCharacters(in: .whitespacesAndNewlines)
-        if cleaned.isEmpty { return StandardUnits.none }
-        
-        let lowercased = cleaned.lowercased()
-        
-        let allUnits = all
-        
-        // 1. Fast Path: Exact Match (e.g., "N", "kg", "m/sec²")
-        if let exact = allUnits.first(where: { $0.symbol.lowercased() == lowercased || $0.explicitSymbol?.lowercased() == lowercased }) {
-            return exact
-        }
-        
-        // 2. Algebraic Tokenization
-        // Normalize visual characters to standard ASCII for easy parsing
-        let normalized = cleaned
-            .replacingOccurrences(of: "·", with: "*")
-            .replacingOccurrences(of: "²", with: "^2")
-            .replacingOccurrences(of: "³", with: "^3")
-            .replacingOccurrences(of: " ", with: "")
-        
-        var result = StandardUnits.none
-        var currentToken = ""
-        var operation: Character = "*" // Start by multiplying the first token into 'none'
-        
-        // Helper to commit a parsed token (like "sec^2") into the running result
-        func commitTerm() {
-            guard !currentToken.isEmpty else { return }
-            
-            // Split out the exponent (e.g. "sec^2" -> "sec", "2")
-            let parts = currentToken.components(separatedBy: "^")
-            let symbol = parts[0]
-            let power = parts.count > 1 ? (Int(parts[1]) ?? 1) : 1
-            
-            // Look up the base token
-            guard let baseUnit = allUnits.first(where: { $0.symbol.lowercased() == symbol.lowercased() }) else {
-                currentToken = ""
-                return // You could throw an error here for unknown tokens if desired
-            }
-            
-            // Expand the exponent (sec^2 -> sec * sec)
-            var termUnit = baseUnit
-            if power > 1 {
-                for _ in 2...power { termUnit = termUnit * baseUnit }
-            }
-            
-            // Apply to the running mathematical result
-            if result.isEquivalent(to: StandardUnits.none) {
-                result = operation == "/" ? (StandardUnits.none / termUnit) : termUnit
-            } else {
-                result = operation == "/" ? (result / termUnit) : (result * termUnit)
-            }
-            
-            currentToken = ""
-        }
-        
-        // Scan characters left to right
-        for char in normalized {
-            if char == "*" || char == "/" {
-                commitTerm()
-                operation = char
-            } else {
-                currentToken.append(char)
-            }
-        }
-        commitTerm() // Flush the final token
-        
-        // 3. The Magic: Alias Resolution
-        // If the parsed string algebraically equates to a known unit, return the canonical version.
-        // e.g. "kg*m/sec^2" == newtons (because signatures match!).
-        if let canonicalAlias = allUnits.first(where: { $0.isEquivalent(to: result) }) {
-            return canonicalAlias
-        }
-        
-        if keep {
-            ExpressionUnit.registerUserUnit(result)
-        }
-        
-        return result
-    }
 }

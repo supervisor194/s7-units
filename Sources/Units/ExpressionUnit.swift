@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 /// A mathematical unit that can be combined, multiplied, and divided.
 public struct ExpressionUnit:  Hashable, Codable, Sendable, CustomStringConvertible {
@@ -19,7 +20,7 @@ public struct ExpressionUnit:  Hashable, Codable, Sendable, CustomStringConverti
     // MARK: - Initializers
     
     /// Internal initializer for combining units algebraically
-    private init(explicitSymbol: String? = nil, terms: [String: Int], signature: DimensionalSignature, offsetToSI: Double = 0.0) {
+    public init(explicitSymbol: String? = nil, terms: [String: Int], signature: DimensionalSignature, offsetToSI: Double = 0.0) {
         self.explicitSymbol = explicitSymbol
         self.terms = terms
         self.signature = signature
@@ -221,38 +222,227 @@ extension ExpressionUnit {
 }
 
 
+
+extension ExpressionUnit {
+    
+    /// Robust parsing from string input, evaluating algebraic combinations.
+    internal static func resolve(_ s: String, against allUnits: [ExpressionUnit]) -> (unit: ExpressionUnit, isNew: Bool) {
+        let cleaned = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleaned.isEmpty { return (StandardUnits.none, false) }
+        
+        let lowercased = cleaned.lowercased()
+        
+        // 1. Fast Path: Exact Match (e.g., "N", "kg", "m/sec²")
+        if let exact = allUnits.first(where: { $0.symbol.lowercased() == lowercased || $0.explicitSymbol?.lowercased() == lowercased }) {
+            return (exact, false)
+        }
+        
+        // 2. Algebraic Tokenization
+        // Normalize visual characters to standard ASCII for easy parsing
+        let normalized = cleaned
+            .replacingOccurrences(of: "·", with: "*")
+            .replacingOccurrences(of: "²", with: "^2")
+            .replacingOccurrences(of: "³", with: "^3")
+            .replacingOccurrences(of: "⁴", with: "^4")
+            .replacingOccurrences(of: "⁵", with: "^5")
+            .replacingOccurrences(of: "⁶", with: "^6")
+            .replacingOccurrences(of: "⁷", with: "^7")
+            .replacingOccurrences(of: "⁸", with: "^8")
+            .replacingOccurrences(of: "⁹", with: "^9")
+            .replacingOccurrences(of: " ", with: "")
+        
+        var result = StandardUnits.none
+        var operation: Character = "*" // Start by multiplying the first token into 'none'
+        
+        // Helper to apply any resolved unit (symbol or parenthetical group) to the running result
+        func applyTerm(_ termUnit: ExpressionUnit) {
+            if result.isEquivalent(to: StandardUnits.none) {
+                result = operation == "/" ? (StandardUnits.none / termUnit) : termUnit
+            } else {
+                result = operation == "/" ? (result / termUnit) : (result * termUnit)
+            }
+        }
+        
+        // Helper to commit a base symbol token (like "sec^2")
+        func commitToken(_ token: String) {
+            guard !token.isEmpty else { return }
+            
+            let parts = token.components(separatedBy: "^")
+            let symbol = parts[0]
+            let power = parts.count > 1 ? (Int(parts[1]) ?? 1) : 1
+            
+            // Look up base unit matching either standard symbol or explicit symbol/alias
+            guard let baseUnit = allUnits.first(where: {
+                $0.symbol.lowercased() == symbol.lowercased() ||
+                $0.explicitSymbol?.lowercased() == symbol.lowercased()
+            }) else {
+                return
+            }
+            
+            var termUnit = baseUnit
+            if power > 1 {
+                for _ in 2...power { termUnit = termUnit * baseUnit }
+            }
+            
+            applyTerm(termUnit)
+        }
+        
+        let chars = Array(normalized)
+        var i = 0
+        
+        while i < chars.count {
+            let char = chars[i]
+            
+            if char == "*" || char == "/" {
+                operation = char
+                i += 1
+            } else if char == "(" {
+                // Find matching closing parenthesis, tracking nesting depth
+                i += 1
+                var depth = 1
+                var innerChars: [Character] = []
+                
+                while i < chars.count && depth > 0 {
+                    if chars[i] == "(" { depth += 1 }
+                    else if chars[i] == ")" { depth -= 1 }
+                    
+                    if depth > 0 {
+                        innerChars.append(chars[i])
+                    }
+                    i += 1
+                }
+                
+                // Recursively resolve the inner expression
+                let innerString = String(innerChars)
+                let (subUnit, _) = resolve(innerString, against: allUnits)
+                
+                // Check if there is an exponent attached to the closing parenthesis (e.g. (m/s)^2)
+                var power = 1
+                if i < chars.count && chars[i] == "^" {
+                    i += 1 // skip '^'
+                    var powerChars = ""
+                    while i < chars.count && (chars[i].isNumber || chars[i] == "-") {
+                        powerChars.append(chars[i])
+                        i += 1
+                    }
+                    if let p = Int(powerChars) {
+                        power = p
+                    }
+                }
+                
+                var finalSubUnit = subUnit
+                if power > 1 {
+                    for _ in 2...power { finalSubUnit = finalSubUnit * subUnit }
+                }
+                
+                applyTerm(finalSubUnit)
+            } else {
+                // Accumulate regular token characters until an operator or parenthesis is reached
+                var tokenChars = ""
+                while i < chars.count && chars[i] != "*" && chars[i] != "/" && chars[i] != "(" && chars[i] != ")" {
+                    tokenChars.append(chars[i])
+                    i += 1
+                }
+                commitToken(tokenChars)
+            }
+        }
+        
+        // 3. Alias & Symbol Preference Resolution
+                // First, check if the computed result exactly matches the symbol of any known unit
+                if let exactSymbolMatch = allUnits.first(where: {
+                    ($0.symbol.lowercased() == normalized) ||
+                    ($0.explicitSymbol?.lowercased() == normalized)
+                }) {
+                    return (exactSymbolMatch, false)
+                }
+                
+                // Next, check if the computed dimensional signature equates to a known unit with a clean symbol
+        if let canonicalAlias = allUnits.first(where: { $0.isEquivalent(to: result) && $0 != StandardUnits.none }) {
+            return (canonicalAlias, false)
+        }
+        
+        return (result, true)
+    }
+
+}
+
+
+
 extension ExpressionUnit {
     private static let lock = NSLock()
     private static let userDefaultsKey = "com.engage.customUserUnits"
     
-    nonisolated(unsafe) private static var userDefinedUnits: [ExpressionUnit] = {
-        loadFromDisk()
+    nonisolated(unsafe) private static var cache: [String: ExpressionUnit] = {
+        var cache: [String: ExpressionUnit] = [:]
+        for unit in StandardUnits.core {
+            cache[unit.persistentKey] = unit
+        }
+        
+        for unit in loadFromDisk() {
+            cache[unit.persistentKey] = unit
+        }
+        return cache
     }()
+    
+    /// Looks up any unit (core or custom) by its deterministic SHA256 persistentKey
+    public static func fetch(key: String) -> ExpressionUnit? {
+        lock.lock()
+        defer { lock.unlock() }
+        return cache[key]
+    }
+    
+    /// Parses an expression string into an ExpressionUnit. Optionally persists it to disk if keep is true.
+    public static func resolve(_ expression: String, keep: Bool = false) -> ExpressionUnit {
+        let (unit, isNew) = resolve(expression, against: all)
+        if isNew && keep && unit != StandardUnits.none {
+            registerUserUnit(unit)
+        }
+        return unit
+    }
     
     public static func registerUserUnit(_ unit: ExpressionUnit) {
         lock.lock()
         defer { lock.unlock() }
-        if !userDefinedUnits.contains(where : { $0 == unit }) {
-            userDefinedUnits.append(unit)
-            saveToDisk()
-        }
+        
+        let key = unit.persistentKey
+        cache[key] = unit
+        
+        // Collect all user units currently in cache (everything except core)
+        let coreKeys = Set(StandardUnits.core.map { $0.persistentKey })
+        let userDefinedUnits = cache.values.filter { !coreKeys.contains($0.persistentKey) }
+        
+        saveToDisk(Array(userDefinedUnits))
     }
     
+    /// All active user-defined custom units served instantly from memory cache
     public static var userUnits: [ExpressionUnit] {
         lock.lock()
         defer { lock.unlock() }
-        return userDefinedUnits
+        let coreKeys = Set(StandardUnits.core.map { $0.persistentKey })
+        return cache.values.filter { !coreKeys.contains($0.persistentKey) }
+    }
+        
+        /// Combined list of all built-in core units and user-defined custom units served from memory cache
+    public static var all: [ExpressionUnit] {
+        lock.lock()
+        defer { lock.unlock() }
+        return Array(cache.values)
     }
     
     public static func deleteUserUnits() {
         lock.lock()
         defer { lock.unlock() }
-        userDefinedUnits.removeAll()
+        cache = [:]
+        for unit in StandardUnits.core {
+            cache[unit.persistentKey] = unit
+        }
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
     }
     
-    private static func saveToDisk() {
-        guard let data = try? JSONEncoder().encode(userDefinedUnits) else { return }
+    // MARK: - Disk I/O Helpers
+    
+    private static func saveToDisk(_ units: [ExpressionUnit]) {
+        guard let data = try? JSONEncoder().encode(units) else { return }
         UserDefaults.standard.set(data, forKey: userDefaultsKey)
     }
     
@@ -264,4 +454,26 @@ extension ExpressionUnit {
         return units
     }
     
+}
+
+
+extension ExpressionUnit {
+    
+    /// A deterministic, cross-device unique key derived from both the symbol and its mathematical definition.
+    public var persistentKey: String {
+        let sortedTerms = terms.sorted(by: { $0.key < $1.key })
+            .map { "\($0.key):\($0.value)" }
+            .joined(separator: "_")
+        
+        let symbolPayload = explicitSymbol?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) ?? "none"
+        
+        // Combine symbol and all physics parameters into the hash input
+        let rawSignature = "sym:\(symbolPayload)_m\(signature.mass)_l\(signature.length)_t\(signature.time)_temp\(signature.temperature)_sc\(signature.scaleToSI)_off\(offsetToSI)_\(sortedTerms)"
+        
+        let inputData = Data(rawSignature.utf8)
+        let hashed = SHA256.hash(data: inputData)
+        let hashString = hashed.compactMap { String(format: "%02x", $0) }.joined()
+        
+        return String(hashString.prefix(16))
+    }
 }

@@ -230,10 +230,8 @@ extension ExpressionUnit {
         let cleaned = s.trimmingCharacters(in: .whitespacesAndNewlines)
         if cleaned.isEmpty { return (StandardUnits.none, false) }
         
-        let lowercased = cleaned.lowercased()
-        
         // 1. Fast Path: Exact Match (e.g., "N", "kg", "m/sec²")
-        if let exact = allUnits.first(where: { $0.symbol.lowercased() == lowercased || $0.explicitSymbol?.lowercased() == lowercased }) {
+        if let exact = allUnits.first(where: { $0.symbol == cleaned || $0.explicitSymbol == cleaned }) {
             return (exact, false)
         }
         
@@ -273,8 +271,8 @@ extension ExpressionUnit {
             
             // Look up base unit matching either standard symbol or explicit symbol/alias
             guard let baseUnit = allUnits.first(where: {
-                $0.symbol.lowercased() == symbol.lowercased() ||
-                $0.explicitSymbol?.lowercased() == symbol.lowercased()
+                $0.symbol == symbol ||
+                $0.explicitSymbol == symbol
             }) else {
                 return
             }
@@ -347,18 +345,17 @@ extension ExpressionUnit {
             }
         }
         
-        // 3. Alias & Symbol Preference Resolution
-                // First, check if the computed result exactly matches the symbol of any known unit
-                if let exactSymbolMatch = allUnits.first(where: {
-                    ($0.symbol.lowercased() == normalized) ||
-                    ($0.explicitSymbol?.lowercased() == normalized)
-                }) {
-                    return (exactSymbolMatch, false)
-                }
-                
-                // Next, check if the computed dimensional signature equates to a known unit with a clean symbol
+        // 3. Canonical Alias Resolution First (Ensures "m/sec^2" resolves to canonical "m/s^2")
         if let canonicalAlias = allUnits.first(where: { $0.isEquivalent(to: result) && $0 != StandardUnits.none }) {
             return (canonicalAlias, false)
+        }
+        
+        // Then fallback to exact symbol match
+        if let exactSymbolMatch = allUnits.first(where: {
+            ($0.symbol == normalized) ||
+            ($0.explicitSymbol == normalized)
+        }) {
+            return (exactSymbolMatch, false)
         }
         
         return (result, true)
@@ -367,10 +364,27 @@ extension ExpressionUnit {
 }
 
 
-
 extension ExpressionUnit {
     private static let lock = NSLock()
     private static let userDefaultsKey = "com.engage.customUserUnits"
+    
+    /// A deterministic, cross-device unique key derived from both the symbol and its mathematical definition.
+    public var persistentKey: String {
+        let sortedTerms = terms.sorted(by: { $0.key < $1.key })
+            .map { "\($0.key):\($0.value)" }
+            .joined(separator: "_")
+        
+        let symbolPayload = explicitSymbol?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "none"
+        
+        // Combine symbol and all physics parameters into the hash input
+        let rawSignature = "sym:\(symbolPayload)_m\(signature.mass)_l\(signature.length)_t\(signature.time)_temp\(signature.temperature)_sc\(signature.scaleToSI)_off\(offsetToSI)_\(sortedTerms)"
+        
+        let inputData = Data(rawSignature.utf8)
+        let hashed = SHA256.hash(data: inputData)
+        let hashString = hashed.compactMap { String(format: "%02x", $0) }.joined()
+        
+        return String(hashString.prefix(16))
+    }
     
     nonisolated(unsafe) private static var cache: [String: ExpressionUnit] = {
         var cache: [String: ExpressionUnit] = [:]
@@ -422,11 +436,20 @@ extension ExpressionUnit {
         return cache.values.filter { !coreKeys.contains($0.persistentKey) }
     }
         
-        /// Combined list of all built-in core units and user-defined custom units served from memory cache
+    /// Combined list of all built-in core units and user-defined custom units served from memory cache in a guaranteed deterministic order
     public static var all: [ExpressionUnit] {
         lock.lock()
         defer { lock.unlock() }
-        return Array(cache.values)
+        
+        // Core units always lead in their exact declaration order
+        let coreKeys = Set(StandardUnits.core.map { $0.persistentKey })
+        
+        // User units are sorted deterministically by persistentKey
+        let sortedUserUnits = cache.values
+            .filter { !coreKeys.contains($0.persistentKey) }
+            .sorted { $0.persistentKey < $1.persistentKey }
+        
+        return StandardUnits.core + sortedUserUnits
     }
     
     public static func deleteUserUnits() {
@@ -454,26 +477,4 @@ extension ExpressionUnit {
         return units
     }
     
-}
-
-
-extension ExpressionUnit {
-    
-    /// A deterministic, cross-device unique key derived from both the symbol and its mathematical definition.
-    public var persistentKey: String {
-        let sortedTerms = terms.sorted(by: { $0.key < $1.key })
-            .map { "\($0.key):\($0.value)" }
-            .joined(separator: "_")
-        
-        let symbolPayload = explicitSymbol?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) ?? "none"
-        
-        // Combine symbol and all physics parameters into the hash input
-        let rawSignature = "sym:\(symbolPayload)_m\(signature.mass)_l\(signature.length)_t\(signature.time)_temp\(signature.temperature)_sc\(signature.scaleToSI)_off\(offsetToSI)_\(sortedTerms)"
-        
-        let inputData = Data(rawSignature.utf8)
-        let hashed = SHA256.hash(data: inputData)
-        let hashString = hashed.compactMap { String(format: "%02x", $0) }.joined()
-        
-        return String(hashString.prefix(16))
-    }
 }

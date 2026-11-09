@@ -38,6 +38,8 @@ public enum StandardUnits: Sendable {
     
     // Mass/Weight (Base SI: kg)
     public static let grams       = ExpressionUnit(symbol: "g",   signature: DimensionalSignature(mass: 1, scaleToSI: 0.001))
+    public static let milligrams  = ExpressionUnit(symbol: "mg",  signature: DimensionalSignature(mass: 1, scaleToSI: 0.000001))
+
     public static let pounds      = ExpressionUnit(symbol: "lbs", signature: DimensionalSignature(mass: 1, scaleToSI: 0.45359237))
     public static let ounces      = ExpressionUnit(symbol: "oz",  signature: DimensionalSignature(mass: 1, scaleToSI: 0.02834952))
     

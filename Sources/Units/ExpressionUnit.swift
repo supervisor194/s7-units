@@ -1,5 +1,9 @@
 import Foundation
+#if canImport(CryptoKit)
 import CryptoKit
+#else
+import Crypto
+#endif
 
 /// A mathematical unit that can be combined, multiplied, and divided.
 public struct ExpressionUnit:  Hashable, Codable, Sendable, CustomStringConvertible {
